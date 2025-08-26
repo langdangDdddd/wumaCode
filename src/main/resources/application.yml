@@ -1,11 +1,18 @@
 spring:
   application:
     name: lang-ai-wuMa-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/lang_ai_wuMa?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+
 server:
   port: 8123
   servlet:
     context-path: /api
     # springdoc-openapi
+
 springdoc:
   group-configs:
    - group: 'default'
