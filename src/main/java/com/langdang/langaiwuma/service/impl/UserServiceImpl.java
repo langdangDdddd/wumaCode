@@ -1,10 +1,14 @@
 package com.langdang.langaiwuma.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.langdang.langaiwuma.exception.BusinessException;
 import com.langdang.langaiwuma.exception.ErrorCode;
+import com.langdang.langaiwuma.model.dto.UserQueryRequest;
 import com.langdang.langaiwuma.model.enums.UserRoleEnum;
 import com.langdang.langaiwuma.model.vo.LoginUserVO;
+import com.langdang.langaiwuma.model.vo.UserVO;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.langdang.langaiwuma.model.entity.User;
@@ -16,6 +20,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.langdang.langaiwuma.constant.UserConstant.USER_LOGIN_STATE;
 
@@ -138,7 +146,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         }
         return currentUser;
     }
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtil.copyProperties(user, userVO);
+        return userVO;
+    }
 
+    /**
+     * 获取脱敏后的用户信息（分页）
+     * @param userList
+     * @return
+     */
+    @Override
+    public List<UserVO> getUserVOList(List<User> userList) {
+        if (CollUtil.isEmpty(userList)) {
+            return new ArrayList<>();
+        }
+        return userList.stream().map(this::getUserVO).collect(Collectors.toList());
+    }
+
+    /**
+     * 用户注销
+     * @param request
+     * @return
+     */
     @Override
     public boolean userLogout(HttpServletRequest request) {
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
@@ -151,6 +186,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         return true;
     }
 
+    /**
+     * 将UserQueryRequest转换成QueryWrapper
+     * @param userQueryRequest
+     * @return
+     */
+    @Override
+    public QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest) {
+        if (userQueryRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+        }
+        Long id = userQueryRequest.getId();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userName = userQueryRequest.getUserName();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+        return QueryWrapper.create()
+                .eq("id", id)
+                .eq("userRole", userRole)
+                .like("userAccount", userAccount)
+                .like("userName", userName)
+                .like("userProfile", userProfile)
+                .orderBy(sortField, "ascend".equals(sortOrder));
+    }
+
+
+    @Override
     // 将密码加盐值进行转换
     public String getEncryptPassword(String password){
         // 盐值

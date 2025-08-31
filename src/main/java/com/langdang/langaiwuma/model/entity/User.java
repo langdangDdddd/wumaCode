@@ -32,7 +32,7 @@ public class User implements Serializable {
     /**
      * id
      */
-    @Id(keyType = KeyType.Auto,value = KeyGenerators.snowFlakeId)
+    @Id(keyType = KeyType.Generator,value = KeyGenerators.snowFlakeId)
     private Long id;
 
     /**
