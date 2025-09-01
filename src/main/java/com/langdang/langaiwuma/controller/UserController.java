@@ -16,6 +16,7 @@ import com.mybatisflex.core.paginate.Page;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -95,15 +96,23 @@ public class UserController {
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
-        ThrowUtils.throwIf(userAddRequest == null, ErrorCode.PARAMS_ERROR);
-        User user = new User();
-        BeanUtil.copyProperties(userAddRequest, user);
-        // 默认密码 12345678
-        final String DEFAULT_PASSWORD = "12345678";
-        String encryptPassword = userService.getEncryptPassword(DEFAULT_PASSWORD);
-        user.setUserPassword(encryptPassword);
-        boolean result = userService.save(user);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        User user = null;
+        try {
+            ThrowUtils.throwIf(userAddRequest == null, ErrorCode.PARAMS_ERROR);
+            user = new User();
+            BeanUtil.copyProperties(userAddRequest, user);
+            // 默认密码 12345678
+            final String DEFAULT_PASSWORD = "12345678";
+            String encryptPassword = userService.getEncryptPassword(DEFAULT_PASSWORD);
+            user.setUserPassword(encryptPassword);
+            if (userAddRequest.getUserRole() == null) {
+                user.setUserRole(UserConstant.DEFAULT_ROLE);
+            }
+            boolean result = userService.save(user);
+            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "创建用户失败");
+        }
         return ResultUtils.success(user.getId());
     }
 
@@ -166,15 +175,20 @@ public class UserController {
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
-        ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
-        long pageNum = userQueryRequest.getPageNum();
-        long pageSize = userQueryRequest.getPageSize();
-        Page<User> userPage = userService.page(Page.of(pageNum, pageSize),
-                userService.getQueryWrapper(userQueryRequest));
-        // 数据脱敏
-        Page<UserVO> userVOPage = new Page<>(pageNum, pageSize, userPage.getTotalRow());
-        List<UserVO> userVOList = userService.getUserVOList(userPage.getRecords());
-        userVOPage.setRecords(userVOList);
+        Page<UserVO> userVOPage = null;
+        try {
+            ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
+            long pageNum = userQueryRequest.getPageNum();
+            long pageSize = userQueryRequest.getPageSize();
+            Page<User> userPage = userService.page(Page.of(pageNum, pageSize),
+                    userService.getQueryWrapper(userQueryRequest));
+            // 数据脱敏
+            userVOPage = new Page<>(pageNum, pageSize, userPage.getTotalRow());
+            List<UserVO> userVOList = userService.getUserVOList(userPage.getRecords());
+            userVOPage.setRecords(userVOList);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "分页获取用户失败");
+        }
         return ResultUtils.success(userVOPage);
     }
 
