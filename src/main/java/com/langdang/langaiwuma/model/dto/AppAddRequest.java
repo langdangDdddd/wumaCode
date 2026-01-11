@@ -1,0 +1,23 @@
+package com.langdang.langaiwuma.model.dto;
+
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * 创建应用请求
+ */
+@Data
+public class AppAddRequest implements Serializable {
+
+
+    /**
+     * 应用初始化的 prompt（必填）
+     */
+    private String initPrompt;
+
+
+    private static final long serialVersionUID = 1L;
+}
+
+
