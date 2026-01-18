@@ -1,4 +1,4 @@
-package com.langdang.langaiwuma.model.dto;
+package com.langdang.langaiwuma.model.dto.app;
 
 import lombok.Data;
 

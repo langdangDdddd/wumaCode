@@ -1,6 +1,6 @@
 package com.langdang.langaiwuma.service;
 
-import com.langdang.langaiwuma.model.dto.AppQueryRequest;
+import com.langdang.langaiwuma.model.dto.app.AppQueryRequest;
 import com.langdang.langaiwuma.model.entity.User;
 import com.langdang.langaiwuma.model.vo.AppVO;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -26,4 +26,6 @@ public interface AppService extends IService<App> {
     QueryWrapper getQueryWrapper(AppQueryRequest appQueryRequest);
 
     Flux<String> chatToGenCode(Long appId, String message, User loginUser);
+
+    String deployApp(Long appId,User loginUser);
 }

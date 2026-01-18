@@ -1,8 +1,6 @@
 package com.langdang.langaiwuma.service;
 
-import cn.hutool.http.server.HttpServerRequest;
-import cn.hutool.http.server.HttpServerResponse;
-import com.langdang.langaiwuma.model.dto.UserQueryRequest;
+import com.langdang.langaiwuma.model.dto.user.UserQueryRequest;
 import com.langdang.langaiwuma.model.vo.LoginUserVO;
 import com.langdang.langaiwuma.model.vo.UserVO;
 import com.mybatisflex.core.query.QueryWrapper;

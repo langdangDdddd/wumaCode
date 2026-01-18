@@ -59,7 +59,7 @@ public abstract class CodeFileSaverTemplate<T> {
             throw new BusinessException(ErrorCode.PARAMS_ERROR,"应用Id不能为空");
         }
         String codeType = getCodeType().getValue();
-        String uniqueDirName = StrUtil.format("{}_{}", codeType, IdUtil.getSnowflakeNextIdStr());
+        String uniqueDirName = StrUtil.format("{}_{}", codeType, appId);
         String dirPath = FILE_SAVE_ROOT_DIR + File.separator + uniqueDirName;
         FileUtil.mkdir(dirPath);
         return dirPath;

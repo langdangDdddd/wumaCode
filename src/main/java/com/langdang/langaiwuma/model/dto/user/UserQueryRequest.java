@@ -1,4 +1,4 @@
-package com.langdang.langaiwuma.model.dto;
+package com.langdang.langaiwuma.model.dto.user;
 
 import com.langdang.langaiwuma.common.PageRequest;
 import lombok.Data;

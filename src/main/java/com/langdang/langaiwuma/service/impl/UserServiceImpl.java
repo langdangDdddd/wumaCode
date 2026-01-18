@@ -5,7 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.langdang.langaiwuma.exception.BusinessException;
 import com.langdang.langaiwuma.exception.ErrorCode;
-import com.langdang.langaiwuma.model.dto.UserQueryRequest;
+import com.langdang.langaiwuma.model.dto.user.UserQueryRequest;
 import com.langdang.langaiwuma.model.enums.UserRoleEnum;
 import com.langdang.langaiwuma.model.vo.LoginUserVO;
 import com.langdang.langaiwuma.model.vo.UserVO;

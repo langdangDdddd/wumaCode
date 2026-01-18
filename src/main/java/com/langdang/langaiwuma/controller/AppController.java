@@ -12,10 +12,7 @@ import com.langdang.langaiwuma.constant.UserConstant;
 import com.langdang.langaiwuma.exception.BusinessException;
 import com.langdang.langaiwuma.exception.ErrorCode;
 import com.langdang.langaiwuma.exception.ThrowUtils;
-import com.langdang.langaiwuma.model.dto.AppAddRequest;
-import com.langdang.langaiwuma.model.dto.AppAdminUpdateRequest;
-import com.langdang.langaiwuma.model.dto.AppQueryRequest;
-import com.langdang.langaiwuma.model.dto.AppUpdateRequest;
+import com.langdang.langaiwuma.model.dto.app.*;
 import com.langdang.langaiwuma.model.entity.User;
 import com.langdang.langaiwuma.model.enums.CodeGenTypeEnum;
 import com.langdang.langaiwuma.model.vo.AppVO;
@@ -28,7 +25,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import com.langdang.langaiwuma.model.entity.App;
 import com.langdang.langaiwuma.service.AppService;
 import reactor.core.publisher.Flux;
@@ -322,5 +318,27 @@ public class AppController {
         return contentFlux;
     }
 
+    /**
+     * 应用部署
+     *
+     * @param appDeployRequest 部署请求
+     * @param request          请求
+     * @return 部署 URL
+     */
+    @PostMapping("/deploy")
+    public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpServletRequest request) {
+        // 检查部署请求是否为空
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        // 获取应用 ID
+        Long appId = appDeployRequest.getAppId();
+        // 检查应用 ID 是否为空
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用 ID 不能为空");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser(request);
+        // 调用服务部署应用
+        String deployUrl = appService.deployApp(appId, loginUser);
+        // 返回部署 URL
+        return ResultUtils.success(deployUrl);
+    }
 
 }

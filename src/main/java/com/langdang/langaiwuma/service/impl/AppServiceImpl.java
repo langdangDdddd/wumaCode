@@ -2,13 +2,16 @@ package com.langdang.langaiwuma.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IORuntimeException;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.langdang.langaiwuma.ai.AiCodeGeneratorService;
+import com.langdang.langaiwuma.constant.AppConstant;
 import com.langdang.langaiwuma.core.AiCodeGeneratorFacade;
 import com.langdang.langaiwuma.exception.BusinessException;
 import com.langdang.langaiwuma.exception.ErrorCode;
 import com.langdang.langaiwuma.exception.ThrowUtils;
-import com.langdang.langaiwuma.model.dto.AppQueryRequest;
+import com.langdang.langaiwuma.model.dto.app.AppQueryRequest;
 import com.langdang.langaiwuma.model.entity.User;
 import com.langdang.langaiwuma.model.enums.CodeGenTypeEnum;
 import com.langdang.langaiwuma.model.vo.AppVO;
@@ -20,9 +23,13 @@ import com.langdang.langaiwuma.model.entity.App;
 import com.langdang.langaiwuma.mapper.AppMapper;
 import com.langdang.langaiwuma.service.AppService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +41,7 @@ import java.util.stream.Collectors;
  *
  * @author 王睿麟
  */
+@Slf4j
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppService{
 
@@ -129,6 +137,52 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         }
         // 5. 调用 AI 生成代码
         return aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+    }
+
+    @Override
+    public String deployApp(Long appId, User loginUser) {
+        ThrowUtils.throwIf(appId==null||appId<=0,ErrorCode.PARAMS_ERROR,"应用ID错误");
+        ThrowUtils.throwIf(loginUser==null,ErrorCode.NOT_LOGIN_ERROR,"用户未登录");
+        App app=this.getById(appId);
+        ThrowUtils.throwIf(app==null,ErrorCode.NOT_FOUND_ERROR,"应用不存在");
+        if (!app.getUserId().equals(loginUser.getId())){
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"无权限部署该应用");
+        }
+        //  查询是deployKey是否存在
+        if (StringUtils.isBlank(app.getDeployKey())) {
+            // 如果没有生成6为deployKey（字母加数字）
+            app.setDeployKey(RandomUtil.randomString(6));
+            this.updateById(app);
+        }
+        // 获取代码生成类型，获取原始代码的生成路径（应用访问目录）
+        String codeGenType=app.getCodeGenType();
+        String sourceDirName=codeGenType+"_"+appId;
+        String sourceDirPath= AppConstant.CODE_OUTPUT_ROOT_DIR+ File.separator+sourceDirName;
+        log.info("App{},当前路径为",sourceDirPath);
+        // 检查路径是否存在
+        File sourceDir=new File(sourceDirPath);
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"应用代码路径不存在，请先生成应用");
+        }
+        // 复制文件部署目录
+        String deployDirPath=AppConstant.CODE_DEPLOY_ROOT_DIR+File.separator+app.getDeployKey();
+        try {
+            FileUtil.copyContent(sourceDir,new File(deployDirPath),true);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"应用部署失败"+e.getMessage());
+        }
+        App updateApp=new App();
+        updateApp.setId(appId);
+        updateApp.setDeployKey(app.getDeployKey());
+        updateApp.setDeployedTime(LocalDateTime.now());
+        try {
+            this.updateById(updateApp);
+        } catch (Exception e) {
+            log.error("APP{}更新应用部署信息失败",app.getAppName());
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"更新应用部署失败"+e.getMessage());
+        }
+        // 返回可访问的URL地址
+        return String.format("%s%s",AppConstant.CODE_DEPLOY_HOST,app.getDeployKey());
     }
 
 }
