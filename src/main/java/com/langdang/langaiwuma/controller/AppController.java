@@ -22,6 +22,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +40,7 @@ import java.util.Map;
  *
  * @author 王睿麟
  */
+@Slf4j
 @RestController
 @RequestMapping("/app")
 public class AppController {
@@ -63,6 +65,7 @@ public class AppController {
         ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化 prompt 不能为空");
         // 获取当前登录用户
         User loginUser = userService.getLoginUser(request);
+        log.info("用户创建应用，用户ID：{}，初始化提示词：{}", loginUser.getId(), initPrompt.substring(0, Math.min(initPrompt.length(), 20)));
         // 构造入库对象
         App app = new App();
         BeanUtil.copyProperties(appAddRequest, app);
@@ -74,6 +77,7 @@ public class AppController {
         // 插入数据库
         boolean result = appService.save(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        log.info("用户创建应用成功，应用ID：{}，用户ID：{}", app.getId(), loginUser.getId());
         return ResultUtils.success(app.getId());
     }
 
@@ -92,14 +96,17 @@ public class AppController {
         }
         User loginUser = userService.getLoginUser(request);
         long id = deleteRequest.getId();
+        log.info("用户删除应用，用户ID：{}，应用ID：{}", loginUser.getId(), id);
         // 判断是否存在
         App oldApp = appService.getById(id);
         ThrowUtils.throwIf(oldApp == null, ErrorCode.NOT_FOUND_ERROR);
         // 仅本人或管理员可删除
         if (!oldApp.getUserId().equals(loginUser.getId()) && !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())) {
+            log.warn("用户删除应用失败，权限不足，用户ID：{}，应用ID：{}", loginUser.getId(), id);
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         boolean result = appService.removeById(id);
+        log.info("用户删除应用{}，用户ID：{}，应用ID：{}", result ? "成功" : "失败", loginUser.getId(), id);
         return ResultUtils.success(result);
     }
 
@@ -118,11 +125,13 @@ public class AppController {
         }
         User loginUser = userService.getLoginUser(request);
         long id = appUpdateRequest.getId();
+        log.info("用户更新应用，用户ID：{}，应用ID：{}，新名称：{}", loginUser.getId(), id, appUpdateRequest.getAppName());
         // 判断是否存在
         App oldApp = appService.getById(id);
         ThrowUtils.throwIf(oldApp == null, ErrorCode.NOT_FOUND_ERROR);
         // 仅本人可更新
         if (!oldApp.getUserId().equals(loginUser.getId())) {
+            log.warn("用户更新应用失败，权限不足，用户ID：{}，应用ID：{}", loginUser.getId(), id);
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         App app = new App();
@@ -132,6 +141,7 @@ public class AppController {
         app.setEditTime(LocalDateTime.now());
         boolean result = appService.updateById(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        log.info("用户更新应用成功，用户ID：{}，应用ID：{}", loginUser.getId(), id);
         return ResultUtils.success(true);
     }
 
@@ -144,6 +154,7 @@ public class AppController {
      */
     @GetMapping("/get/vo")
     public BaseResponse<AppVO> getAppVOById(long id) {
+        log.debug("获取应用详情，应用ID：{}", id);
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
         App app = appService.getById(id);
@@ -168,6 +179,7 @@ public class AppController {
         long pageSize = appQueryRequest.getPageSize();
         ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR, "每页最多查询 20 个应用");
         long pageNum = appQueryRequest.getPageNum();
+        log.info("用户查询自己的应用列表，用户ID：{}，页码：{}，每页大小：{}", loginUser.getId(), pageNum, pageSize);
         // 只查询当前用户的应用
         appQueryRequest.setUserId(loginUser.getId());
         QueryWrapper queryWrapper = appService.getQueryWrapper(appQueryRequest);
@@ -176,6 +188,7 @@ public class AppController {
         Page<AppVO> appVOPage = new Page<>(pageNum, pageSize, appPage.getTotalRow());
         List<AppVO> appVOList = appService.getAppVOList(appPage.getRecords());
         appVOPage.setRecords(appVOList);
+        log.info("用户查询自己的应用列表成功，用户ID：{}，总记录数：{}", loginUser.getId(), appPage.getTotalRow());
         return ResultUtils.success(appVOPage);
     }
 
@@ -192,6 +205,7 @@ public class AppController {
         long pageSize = appQueryRequest.getPageSize();
         ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR, "每页最多查询 20 个应用");
         long pageNum = appQueryRequest.getPageNum();
+        log.info("查询精选应用列表，页码：{}，每页大小：{}", pageNum, pageSize);
         // 只查询精选的应用
         appQueryRequest.setPriority(AppConstant.GOOD_APP_PRIORITY);
         QueryWrapper queryWrapper = appService.getQueryWrapper(appQueryRequest);
@@ -201,6 +215,7 @@ public class AppController {
         Page<AppVO> appVOPage = new Page<>(pageNum, pageSize, appPage.getTotalRow());
         List<AppVO> appVOList = appService.getAppVOList(appPage.getRecords());
         appVOPage.setRecords(appVOList);
+        log.info("查询精选应用列表成功，总记录数：{}", appPage.getTotalRow());
         return ResultUtils.success(appVOPage);
     }
 
